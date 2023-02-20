@@ -1,0 +1,11 @@
+---
+
+apache_port: 80
+apache_domain: "wp-amazon.devopsive.com"
+apache_owner: "apache"
+apache_group: "apache"
+mariadb_root_pass: "Mysqlroot123"
+mariadb_xtra_user: "wpuser"
+mariadb_xtra_db: "wpdatabase"
+mariadb_xtra_pass: "wpuser123"
+wp_url: https://wordpress.org/latest.zip
