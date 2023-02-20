@@ -5,7 +5,7 @@ As you may all know, making a WordPress website live with LAMP stack is a lot of
 In this repo, I will show you how to use Ansible to automate the installation of WordPress with the LAMP stack running on an Amazon Linux and Ubuntu server at a time. This is done in order to minimize manual intervention. WordPress is used to create blogs and websites utilizing PHP as coding language and MySQL/MariaDB database to store data. Once the WordPress installed, users can administer their websites using the web admin panel.
 
 ## Core Features:
-- A Wordpress website will be automatically installed on all the client servers.
+- Wordpress website will be automatically installed on all the clients with different OS - AmazonLinux, Ubuntu .
 - Tasks and variables are included separately on the main YAML file.
 - MySQL root password will be prompted on every run of the playbook.
 
