@@ -1,0 +1,26 @@
+---
+
+- name: "To host a WordPress website on different OS'"
+  become: yes
+  hosts:
+    - amazon
+    - ubuntu
+  vars_files:
+    - amazon-variables.yml
+    - ubuntu-variables.yml
+  vars_prompt:
+    - name: mariadb_default_pass
+      prompt: "Enter MariaDB root password"
+      private: yes
+  tasks:
+    - include_vars: amazon-variables.yml
+      when: ansible_distribution == "Amazon" and ansible_pkg_mgr == "yum"
+
+    - include_vars: ubuntu-variables.yml
+      when: ansible_distribution == "Ubuntu" and ansible_pkg_mgr == "apt"
+
+    - include_tasks: amazonlinux-wordpress-tasks.yml
+      when: ansible_distribution == "Amazon" and ansible_pkg_mgr == "yum"
+
+    - include_tasks: ubuntu-wordpress-tasks.yml
+      when: ansible_distribution == "Ubuntu" and ansible_pkg_mgr == "apt"
