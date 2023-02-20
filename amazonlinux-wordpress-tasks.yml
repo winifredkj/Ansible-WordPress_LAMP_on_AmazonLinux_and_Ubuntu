@@ -1,0 +1,123 @@
+---
+
+- name: "Apache - Installing Httpd"
+  yum:
+    name: httpd
+    state: present
+
+- name: "Apache - install PHP support"
+  shell: amazon-linux-extras install php7.4 -y
+
+- name: "Apache - Creating httpd.conf from httpd.conf.j2"
+  template:
+    src: "httpd.conf.j2"
+    dest: "/etc/httpd/conf/httpd.conf"
+  register: copy_conf_status
+
+- name: "Apache - Creating VirtualHost from virtualhost.conf.j2 file"
+  template:
+    src: virtualhost.conf.j2
+    dest: "/etc/httpd/conf.d/{{apache_domain}}"
+    owner: "{{apache_owner}}"
+    group: "{{apache_group}}"
+  register: vhost_status
+
+- name: "Apache - Creating sample test.html and info.php page"
+  copy:
+    src: "{{item}}"
+    dest: "/var/www/html/{{apache_domain}}/"
+    owner: "{{apache_owner}}"
+    group: "{{apache_group}}"
+  with_items:
+    - test.html
+    - info.php
+
+- name: "MariaDB - Installing MariaDB and MySQL-python"
+  yum:
+    name:
+      - mariadb-server
+      - MySQL-python
+    state: present
+
+- name: "MariaDB - Restarting and Enabling service"
+  service:
+    name: mariadb
+    state: restarted
+    enabled: true
+
+- name: "MariaDB - updating root password for mariadb"
+  mysql_user:
+    login_user: root
+    login_password: "{{mariadb_default_pass}}"
+    name: root
+    password: "{{mariadb_root_pass}}"
+    host_all: yes
+
+- name: "MariaDB - removing anonymous users"
+  mysql_user:
+    login_user: root
+    login_password: "{{mariadb_root_pass}}"
+    name: ""
+    password: ""
+    host_all: yes
+    state: absent
+
+- name: "MariaDB - creating extra database: {{mariadb_xtra_db}}"
+  mysql_db:
+    login_user: root
+    login_password: "{{mariadb_root_pass}}"
+    name: "{{mariadb_xtra_db}}"
+    state: present
+
+- name: "MariaDB - creating extra user: {{mariadb_xtra_user}}"
+  mysql_user:
+    login_user: root
+    login_password: "{{mariadb_root_pass}}"
+    name: "{{mariadb_xtra_user}}"
+    password: "{{mariadb_xtra_pass}}"
+    state: present
+    host: "%"
+    priv: "{{mariadb_xtra_db}}.*:ALL"
+
+- name: "WordPress - Downloading WP archive {{wp_url}}"
+  get_url:
+    url: "{{wp_url}}"
+    dest: "/tmp/wordpress.zip"
+
+- name: "WordPress - Extracting the Zip file"
+  unarchive:
+    src: "/tmp/wordpress.zip"
+    dest: "/tmp/"
+    remote_src: true
+
+- name: "WordPress - Copying wp files from /tmp to /var/www/html/{{apache_domain}}/"
+  copy:
+    src: "/tmp/wordpress/"
+    dest: "/var/www/html/{{apache_domain}}/"
+    remote_src: true
+    owner: "{{apache_owner}}"
+    group: "{{apache_group}}"
+
+- name: "WordPress - Creating wp-config.php from wp-config.php.j2"
+  template:
+    src: wp-config.php.j2
+    dest: "/var/www/html/{{apache_domain}}/wp-config.php"
+    owner: "{{apache_owner}}"
+    group: "{{apache_group}}"
+
+- name: "WordPress - Post Installation - Restarting services"
+  service:
+    name: "{{item}}"
+    state: restarted
+    enabled: true
+  with_items:
+    - mariadb
+    - httpd
+
+- name: "WordPress - Post Installation - Cleanup"
+  file:
+    name: "{{item}}"
+    state: absent
+  with_items:
+    - "/tmp/wordpress/"
+    - "/tmp/wordpress.zip"
