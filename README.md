@@ -41,7 +41,7 @@ In this repo, I will show you how to use Ansible to automate the installation of
 In this section, I will show you what this Ansible Playbook does when we execute it. 
 - Include the variable files for AmazonLinux and Ubuntu in the main.yml file.
 - Include the task files for AmazonLinux and Ubuntu in the main.yml file.
-- Install "httpd"/"apache2" software for the webserver.
+- Install "httpd" or "apache2" software for the webserver on AmazonLinux and Ubuntu clients respectively.
 - Install "PHP" software and its modules for supporting the website content.
 - For AmazonLinux - Copy the template file "httpd.conf.j2" for the main httpd configuraion from the master and creates the "/etc/httpd/conf/httpd.conf" on the client.
 - For Ubuntu - Copy the template file "ports.conf.j2" that mention the apache listening port and create as "/etc/apache2/port.conf"
