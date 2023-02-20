@@ -1,0 +1,216 @@
+---
+
+- name: "Apache - Installing Apache2"
+  apt:
+    update_cache: true
+    name: apache2
+    state: present
+  tags:
+    - lamp
+
+- name: "Apache - install PHP support"
+  apt:
+    name:
+      - php
+      - libapache2-mod-php
+      - php-mysql
+      - php-curl
+      - php-gd
+      - php-mbstring
+      - php-xml
+      - php-xmlrpc
+      - php-soap
+      - php-intl
+      - php-zip
+    state: present
+  tags:
+    - lamp
+
+- name: "Apache - Restarting and Enabling Apache2 service"
+  service:
+    name: apache2
+    state: restarted
+    enabled: true
+  tags:
+    - lamp
+
+- name: "Apache - Creating port.conf from port.conf.j2"
+  template:
+    src: "ports.conf.j2"
+    dest: "/etc/apache2/port.conf"
+  register: copy_conf_status
+  tags:
+    - lamp
+
+- name: "Apache - Creating VirtualHost from wordpress.conf.j2 file"
+  template:
+    src: wordpress.conf.j2
+    dest: "/etc/apache2/sites-available/{{apache_domain}}.conf"
+    owner: "{{apache_owner}}"
+    group: "{{apache_group}}"
+  register: vhost_status
+  tags:
+    - lamp
+
+- name: "Apache - Creating a symlink"
+  file:
+    src: "/etc/apache2/sites-available/{{apache_domain}}.conf"
+    dest: "/etc/apache2/sites-enabled/{{apache_domain}}.conf"
+    state: link
+
+- name: "Apache - Creating document root for {{apache_domain}}"
+  file:
+    path: "/var/www/html/{{apache_domain}}"
+    state: directory
+    owner: "{{apache_owner}}"
+    group: "{{apache_group}}"
+
+- name: "Apache - Creating sample test.html and info.php page"
+  copy:
+    src: "{{item}}"
+    dest: "/var/www/html/{{apache_domain}}/"
+    owner: "{{apache_owner}}"
+    group: "{{apache_group}}"
+  with_items:
+    - test.html
+    - info.php
+  tags:
+    - lamp
+
+- name: "MariaDB - Install pip, unzip"
+  apt:
+    name: python3-pip, unzip
+    state: present
+  tags:
+    - lamp
+    - mariadb
+
+- name: "MariaDB - Install PyMySQL using pip"
+  pip:
+    name: pymysql
+    state: present
+  tags:
+    - lamp
+    - mariadb
+
+- name: "MariaDB - Installing MariaDB"
+  yum:
+    name: mariadb-server
+    state: present
+  tags:
+    - lamp
+    - mariadb
+
+- name: "MariaDB - Restarting and Enabling service"
+  service:
+    name: mariadb
+    state: restarted
+    enabled: true
+  tags:
+    - lamp
+    - mariadb
+
+- name: "MariaDB - updating root password for mariadb"
+  mysql_user:
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+    login_user: root
+    login_password: "{{mariadb_default_pass}}"
+    name: root
+    password: "{{mariadb_root_pass}}"
+    host_all: yes
+  tags:
+    - lamp
+    - mariadb
+
+- name: "MariaDB - removing anonymous users"
+  mysql_user:
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+    login_user: root
+    login_password: "{{mariadb_root_pass}}"
+    name: ""
+    password: ""
+    host_all: yes
+    state: absent
+  tags:
+    - lamp
+    - mariadb
+
+- name: "MariaDB - creating extra database: {{mariadb_xtra_db}}"
+  mysql_db:
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+    login_user: root
+    login_password: "{{mariadb_root_pass}}"
+    name: "{{mariadb_xtra_db}}"
+    state: present
+  tags:
+    - lamp
+    - mariadb
+
+- name: "MariaDB - creating extra user: {{mariadb_xtra_user}}"
+  mysql_user:
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+    login_user: root
+    login_password: "{{mariadb_root_pass}}"
+    name: "{{mariadb_xtra_user}}"
+    password: "{{mariadb_xtra_pass}}"
+    state: present
+    host: "%"
+    priv: "{{mariadb_xtra_db}}.*:ALL"
+  tags:
+    - lamp
+    - mariadb
+
+- name: "WordPress - Downloading WP archive {{wp_url}}"
+  get_url:
+    url: "{{wp_url}}"
+    dest: "/tmp/wordpress.zip"
+  tags:
+    - wordpress
+
+- name: "WordPress - Extracting the Zip file"
+  unarchive:
+    src: "/tmp/wordpress.zip"
+    dest: "/tmp/"
+    remote_src: true
+  tags:
+    - wordpress
+
+- name: "WordPress - Copying wp files from /tmp to /var/www/html/{{apache_domain}}/"
+  copy:
+    src: "/tmp/wordpress/"
+    dest: "/var/www/html/{{apache_domain}}/"
+    remote_src: true
+    owner: "{{apache_owner}}"
+    group: "{{apache_group}}"
+  tags:
+    - wordpress
+
+- name: "WordPress - Creating wp-config.php from wp-config.php.j2"
+  template:
+    src: wp-config.php.j2
+    dest: "/var/www/html/{{apache_domain}}/wp-config.php"
+    owner: "{{apache_owner}}"
+    group: "{{apache_group}}"
+  tags:
+    - wordpress
+
+- name: "WordPress - Post Installation - Restarting services"
+  service:
+    name: "{{item}}"
+    state: restarted
+    enabled: true
+  with_items:
+    - mariadb
+    - apache2
+  tags:
+    - wordpress
+
+- name: "WordPress - Post Installation - Cleanup"
+  file:
+    name: "{{item}}"
+    state: absent
+  with_items:
+    - "/tmp/wordpress/"
+    - "/tmp/wordpress.zip"
+  tags:
+    - wordpress
